@@ -7,19 +7,26 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
-def makeStationary(df):
+def train_test_split(df):
+    train = df[0:len(df) // 2]
+    test = df[len(df) // 2:]
+    return train,test
 
+def makeStationary(df):
     return df
 
 def AugumentedDickeyFullerTest(train):
     adf = adfuller(train['point_value'])
-    print("P value",adf[1])
+    pval = adf[1]
+    print("P value",pval)
 
-    return adf
+    return pval
 
-def preProcessingPipeline(df):
+def preProcessingPipeline(df,dateField,yvalField):
     df = df.dropna()
-    df['date'] = pd.to_datetime(df['point_timestamp'], infer_datetime_format=True)
+    df['date'] = pd.to_datetime(df[dateField], infer_datetime_format=True)
+    df['point_timestamp'] = df[dateField]
+    df['point_value'] = df[yvalField]
     df = df.set_index(['date'])
 
     return df
@@ -50,17 +57,17 @@ def modelPipeline(train,test,df):
     mape = mean_absolute_percentage_error(df['point_value'][start:end + 1], pred)
     return mape
 
-def model_train(df):
-    df = preProcessingPipeline(df)
-    train = df[0:len(df) // 2]
-    test = df[len(df) // 2:]
+def model_train(df,dateField,yvalField):
+    df = preProcessingPipeline(df,dateField,yvalField)
+    train,test = train_test_split(df)
 
-    adf = AugumentedDickeyFullerTest(train)
+    pval = AugumentedDickeyFullerTest(train)
 
-    if adf[1]>0.05:
-        print(" Nature of The TIME SERIES Data :  Non stationary")
+    if pval>0.05:
+        print("Nature of The TIME SERIES Data :  Non stationary")
         df = makeStationary(df)
         dataPlot(df)
+        train,test = train_test_split(df)
         mape = modelPipeline(train,test,df)
     else:
         print("Nature of The TIME SERIES Data : Stationary")
