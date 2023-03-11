@@ -1,4 +1,13 @@
 # dataGenie-hackathon
+
+Dependancies to be installed:
+statsmodels
+pandas
+scikit-learn
+prophet
+fastapi
+matplotlib
+
 Initial Setup of hackathon
 
 To run : uvicorn api_endpoints:app --reload
