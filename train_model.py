@@ -6,9 +6,9 @@ from sklearn.metrics import mean_absolute_percentage_error
 import matplotlib.pyplot as plt
 import warnings
 import xgboost as xgb
+from sklearn.model_selection import train_test_split
 
 warnings.filterwarnings('ignore')
-stationarity = True
 
 def createFeatures(df):
     df = df.copy()
@@ -46,21 +46,17 @@ def xgbRegressor(train,test,feature='point_value'):
 # def LSTM(train,test):
 
 
-def train_test_split(df):
-    train = df[0:len(df) // 2]
-    test = df[len(df) // 2:]
+def trainTestSplit(df):
+    train = df[0:int(len(df) * 0.75)]
+    test = df[int(len(df) * 0.75):]
     return train,test
 
 def makeStationary(df):
 
-    for i in range(5):
-        df['shift'] = df['point_value'].shift()
-        df['diff'] = df['point_value'] - df['shift']
-        df = dropNullValues(df)
-        pval = AugumentedDickeyFullerTest(df,'diff')
-        if pval<0.05:
-            break
-        df['point_value'] = df['diff']
+    df['shift'] = df['point_value'].shift()
+    df['diff'] = (df['point_value'] - df['shift'])/df['point_value'].rolling(window=12).mean()
+    df = dropNullValues(df)
+    df['point_value'] = df['diff']
     return df
 
 def AugumentedDickeyFullerTest(df,feature='point_value'):
@@ -102,18 +98,25 @@ def modelClassifier(train,test):
 
 def modelPipeline(df):
 
-    train, test = train_test_split(df)
+    train, test = trainTestSplit(df)
     pred,model,mape = modelClassifier(train,test)
     graphPlot(pred,test)
 
     return mape
 
+def summary(df):
+    print(df.describe())
+    print("Kurtosis",df['point_value'].kurt())
+    print("Skewness",df['point_value'].skew())
+
 def model_train(df,dateField,yvalField):
     df = preProcessingPipeline(df,dateField,yvalField)
+    summary(df)
     pval = AugumentedDickeyFullerTest(df)
 
     if pval>0.05:
         print("Nature of The TIME SERIES Data :  Non stationary")
+        dataPlot(df)
         df = makeStationary(df)
         dataPlot(df)
 
