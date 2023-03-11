@@ -13,6 +13,8 @@ fastapi
 
 matplotlib
 
+Tensorflow
+
 Initial Setup of hackathon
 
 To run : uvicorn api_endpoints:app --reload
