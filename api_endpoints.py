@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 import pandas as pd
+from train_model import model_train
 app = FastAPI()
 
 @app.get("/")
