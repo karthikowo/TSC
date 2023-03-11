@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 import warnings
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from keras.preprocessing.sequence import TimeseriesGenerator
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
 
 warnings.filterwarnings('ignore')
 
@@ -43,12 +48,42 @@ def xgbRegressor(train,test,feature='point_value'):
     pred = reg.predict(X_test)
     return pred
 
-# def LSTM(train,test):
+def LSTMR(train,test):
+    scaler = MinMaxScaler()
+    scaler.fit(train['point_value'].values.reshape(-1,1))
+    scaled_train = scaler.transform(train['point_value'].values.reshape(-1,1))
+    scaled_test = scaler.transform(test['point_value'].values.reshape(-1,1))
 
+    n_input = 10
+    n_features = 1
+    generator = TimeseriesGenerator(scaled_train,scaled_train,length=n_input,batch_size=1)
+
+    model = Sequential()
+    model.add(LSTM(100,activation='relu',input_shape=(n_input,n_features)))
+    model.add(Dense(1))
+    model.compile(optimizer='adam',loss='mse')
+
+    model.fit(generator)
+
+    last_train_batch = scaled_train[-n_input:]
+    last_train_batch = last_train_batch.reshape((1,n_input,n_features))
+
+    test_predictions = []
+
+    first_eval_batch = scaled_train[-n_input:]
+    current_batch = first_eval_batch.reshape((1,n_input,n_features))
+
+    for i in range(len(test)):
+        current_pred = model.predict(current_batch)[0]
+        test_predictions.append(current_pred)
+        current_batch = np.append(current_batch[:,1:,:],[[current_pred]],axis=1)
+
+    true_preds = scaler.inverse_transform(test_predictions)
+    return true_preds
 
 def trainTestSplit(df):
-    train = df[0:int(len(df) * 0.75)]
-    test = df[int(len(df) * 0.75):]
+    train = df[0:int(len(df) * 0.5)]
+    test = df[int(len(df) * 0.5):]
     return train,test
 
 def makeStationary(df):
@@ -92,9 +127,10 @@ def modelClassifier(train,test):
 
     pred1 = arimaModel(train,test)
     pred2 = xgbRegressor(train,test)
+    pred3 = LSTMR(train,test)
 
-    mape = mean_absolute_percentage_error(test['point_value'], pred2)
-    return pred2,"xgb",mape
+    mape = mean_absolute_percentage_error(test['point_value'], pred3)
+    return pred3,"xgb",mape
 
 def modelPipeline(df):
 
