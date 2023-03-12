@@ -2,11 +2,18 @@
 
 Dependancies to be installed:
 statsmodels
+
 pandas
+
 scikit-learn
+
 prophet
+
 fastapi
+
 matplotlib
+
+Tensorflow
 
 Initial Setup of hackathon
 
