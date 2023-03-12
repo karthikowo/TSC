@@ -20,16 +20,26 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 
 warnings.filterwarnings('ignore')
 
-def createFeatures(df):
+
+def create_features(df):
+    # extracting features from the dataset 
     df = df.copy()
     df['hour'] = df.index.hour
     df['dayofweek'] = df.index.day_of_week
     df['month'] = df.index.month
-    FEATURES = ['hour', 'dayofweek', 'month']
-    df = df[FEATURES]
+    features = ['hour', 'dayofweek', 'month']
+    df = df[features]
     return df
 
-def arimaModel(train, test, feature='point_value'):
+
+def arima_model(train, test, feature='point_value'):
+    '''
+    arima(p,d,q)
+    the p value is calculated from the Partial Autocorrelation plot for which data points exceed the confidence interval.
+    the q value is calculated from the Autocorrelation plot for which data points exceed the confidence interval.
+    they are initially 0. as the ARIMA could be AR model,MA model,or the ARIMA model depending on the params.
+    '''
+
     acf, cia = sm.tsa.acf(train[feature], alpha=0.05)
     pacf, cip = sm.tsa.pacf(train[feature], alpha=0.05)
 
@@ -63,17 +73,21 @@ def arimaModel(train, test, feature='point_value'):
 
     return pred
 
-def xgbRegressor(train, test, feature='point_value'):
-    X_train = createFeatures(train)
+
+def xgb_regressor(train, test, feature='point_value'):
+    '''
+    extracting features from the dataset and feeding into XGBoost algo
+    '''
+    X_train = create_features(train)
     Y_train = train[feature]
-    X_test = createFeatures(test)
+    X_test = create_features(test)
     Y_test = test[feature]
 
-    print("XGB")
     reg = xgb.XGBRegressor(n_estimators=1000)
     reg.fit(X_train, Y_train)
     pred = reg.predict(X_test)
     return pred
+
 
 def LSTMR(train, test):
     scaler = MinMaxScaler()
@@ -108,30 +122,43 @@ def LSTMR(train, test):
     true_preds = scaler.inverse_transform(test_predictions)
     return true_preds
 
+
 def trainTestSplit(df):
+    # splitting into train and test 
     train = df[0:int(len(df) * 0.5)]
     test = df[int(len(df) * 0.5):]
     return train, test
 
+
 def makeStationary(df):
+    # sample differencing 
     df['shift'] = df['point_value'].shift()
     df['diff'] = (df['point_value'] - df['shift']) / df['point_value'].rolling(window=12).mean()
     df = dropNullValues(df)
     df['point_value'] = df['diff']
     return df
 
-def AugumentedDickeyFullerTest(df, feature='point_value'):
+
+def augmentedDickeyFullerTest(df, feature='point_value'):
+    # adfuller test to check stationarity 
     adf = adfuller(df[feature])
     pval = adf[1]
     print("P value", pval)
 
     return pval
 
+
 def dropNullValues(df):
+    # drop null values in the dataframe 
     df = df.dropna()
     return df
 
+
 def preProcessingPipeline(df, dateField, yvalField):
+    '''
+    the date,y values are set to a fixed name that will be used throughout.
+    the index of the dataframe is made to date for functions that require this.
+    '''
     df = dropNullValues(df)
     df['date'] = pd.to_datetime(df[dateField], infer_datetime_format=True)
     df['point_timestamp'] = df[dateField]
@@ -140,20 +167,31 @@ def preProcessingPipeline(df, dateField, yvalField):
 
     return df
 
+
 def dataPlot(df):
+    # plot the initial dataset 
     plt.plot_date(df.index, df['point_value'])
     plt.show()
 
+
 def graphPlot(pred, test):
+    # plotting test predictions vs original test set 
     plt.plot_date(test.index, test['point_value'], color='cornflowerblue', label='Original')
     plt.plot_date(test.index, pred, color='firebrick', label='Predicted')
     plt.show()
 
+
 def modelClassifier(df, sdf):
-    pval = AugumentedDickeyFullerTest(df)
-    fdf = createFeatures(df)
-    print(fdf.head())
-    print(fdf.describe())
+    '''
+    selecting the best model based on time series features.
+    1. ADfuller test is performed in all the cases and the data is made stationary if needed.
+    2. if the time series data has hour,day component the features are extracted and ensemble model is used. (XGBoost)
+    3. if the data has seasonality we use the RNN model LSTM to capture the seasonality of the time series
+    4. if the data has no daily,hourly component then we use the ARIMA model. which tunes the params(AR,MA,ARIMA)
+    '''
+
+    pval = augmentedDickeyFullerTest(df)
+    fdf = create_features(df)
     modelused = ""
     print("BEFORE:", pval, sdf['trend'].mean(), sdf['seasonality'].mean())
 
@@ -166,12 +204,12 @@ def modelClassifier(df, sdf):
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
-                pred = xgbRegressor(train, test)
+                pred = xgb_regressor(train, test)
                 modelused = "XGBoost"
         else:
             print(f"Non Stationary Time Series data. pvalue = {pval}")
             df = makeStationary(df)
-            pval = AugumentedDickeyFullerTest(df)
+            pval = augmentedDickeyFullerTest(df)
             print(f"Eliminated Trend Component. pvalue = {pval}")
             train, test = trainTestSplit(df)
             sdf = summary(df)
@@ -180,7 +218,7 @@ def modelClassifier(df, sdf):
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
-                pred = xgbRegressor(train, test)
+                pred = xgb_regressor(train, test)
                 modelused = "XGBoost"
     else:
         if pval < 0.05:
@@ -191,12 +229,12 @@ def modelClassifier(df, sdf):
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
-                pred = arimaModel(train, test)
+                pred = arima_model(train, test)
                 modelused = "ARIMA"
         else:
             print(f"Non Stationary Time Series data. pvalue = {pval}")
             df = makeStationary(df)
-            pval = AugumentedDickeyFullerTest(df)
+            pval = augmentedDickeyFullerTest(df)
             print(f"Eliminated Trend Component. pvalue = {pval}")
             train, test = trainTestSplit(df)
             sdf = summary(df)
@@ -205,7 +243,7 @@ def modelClassifier(df, sdf):
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
-                pred = arimaModel(train, test)
+                pred = arima_model(train, test)
                 modelused = "ARIMA"
 
     print("AFTER", pval, sdf['trend'].mean(), sdf['seasonality'].mean())
@@ -215,6 +253,7 @@ def modelClassifier(df, sdf):
 
 
 def modelPipeline(df):
+    # feeding the dataset to model classifier 
     sdf = summary(df)
     pred, test, model, mape = modelClassifier(df, sdf)
     graphPlot(pred, test)
@@ -223,6 +262,7 @@ def modelPipeline(df):
 
 
 def summaryPlot(df, sdf):
+    # plotting the time series features 
     plt.figure(figsize=(12, 10))
     plt.subplot(411)
     plt.plot(sdf, label='Original time series', color='blue')
@@ -254,11 +294,12 @@ def summary(df):
 
     new_df_add = pd.concat([add_results.seasonal, add_results.trend, add_results.resid, add_results.observed], axis=1)
     new_df_add.columns = ['seasonality', 'trend', 'resid', 'observed']
-    print(new_df_add.head())
 
     return new_df_add
 
+
 def model_train(df, dateField, yvalField):
+    # main function
     df = preProcessingPipeline(df, dateField, yvalField)
     dataPlot(df)
     mape, model = modelPipeline(df)
