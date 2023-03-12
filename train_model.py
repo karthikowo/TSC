@@ -1,5 +1,4 @@
-import sys
-
+import math
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
@@ -9,20 +8,18 @@ from sklearn.metrics import mean_absolute_percentage_error
 import matplotlib.pyplot as plt
 import warnings
 import xgboost as xgb
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 warnings.filterwarnings('ignore')
 
 
 def create_features(df):
-    # extracting features from the dataset 
+    # extracting features from the dataset
     df = df.copy()
     df['hour'] = df.index.hour
     df['dayofweek'] = df.index.day_of_week
@@ -32,13 +29,34 @@ def create_features(df):
     return df
 
 
+def checkNatureOfTimeSeries(fdf):
+    # checking the frequency between the dates
+    fdf['copydate'] = fdf.index
+    fdf['shift'] = fdf['copydate'].shift()
+    fdf['datediff'] = (fdf['copydate']-fdf['shift']).dt.days
+    fdf = dropNullValues(fdf)
+
+    avg = fdf['datediff'].mean()
+    nature_of_ts = ""
+    if abs(math.floor(avg)) > 28:
+        nature_of_ts = "monthly"
+    elif abs(math.floor(avg)) > 6:
+        nature_of_ts = "weekly"
+    elif abs(math.floor(avg)) >= 1:
+        nature_of_ts = "daily"
+    else:
+        nature_of_ts = "hourly"
+
+    return nature_of_ts
+
+
 def arima_model(train, test, feature='point_value'):
-    '''
+    """
     arima(p,d,q)
     the p value is calculated from the Partial Autocorrelation plot for which data points exceed the confidence interval.
     the q value is calculated from the Autocorrelation plot for which data points exceed the confidence interval.
     they are initially 0. as the ARIMA could be AR model,MA model,or the ARIMA model depending on the params.
-    '''
+    """
 
     acf, cia = sm.tsa.acf(train[feature], alpha=0.05)
     pacf, cip = sm.tsa.pacf(train[feature], alpha=0.05)
@@ -75,9 +93,9 @@ def arima_model(train, test, feature='point_value'):
 
 
 def xgb_regressor(train, test, feature='point_value'):
-    '''
+    """
     extracting features from the dataset and feeding into XGBoost algo
-    '''
+    """
     X_train = create_features(train)
     Y_train = train[feature]
     X_test = create_features(test)
@@ -96,13 +114,16 @@ def LSTMR(train, test):
     scaled_test = scaler.transform(test['point_value'].values.reshape(-1, 1))
 
     n_input = 10
+    if n_input > len(train):
+        n_input = len(train) // 2
+
     n_features = 1
     generator = TimeseriesGenerator(scaled_train, scaled_train, length=n_input, batch_size=1)
 
     model = Sequential()
     model.add(LSTM(100, activation='relu', input_shape=(n_input, n_features)))
     model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mse')
+    model.compile(optimizer='adam', loss='mse', metrics=['mean_absolute_error'])
 
     model.fit(generator)
 
@@ -124,14 +145,14 @@ def LSTMR(train, test):
 
 
 def trainTestSplit(df):
-    # splitting into train and test 
+    # splitting into train and test
     train = df[0:int(len(df) * 0.5)]
     test = df[int(len(df) * 0.5):]
     return train, test
 
 
 def makeStationary(df):
-    # sample differencing 
+    # sample differencing
     df['shift'] = df['point_value'].shift()
     df['diff'] = (df['point_value'] - df['shift']) / df['point_value'].rolling(window=12).mean()
     df = dropNullValues(df)
@@ -140,7 +161,7 @@ def makeStationary(df):
 
 
 def augmentedDickeyFullerTest(df, feature='point_value'):
-    # adfuller test to check stationarity 
+    # adfuller test to check stationarity
     adf = adfuller(df[feature])
     pval = adf[1]
     print("P value", pval)
@@ -149,16 +170,16 @@ def augmentedDickeyFullerTest(df, feature='point_value'):
 
 
 def dropNullValues(df):
-    # drop null values in the dataframe 
+    # drop null values in the dataframe
     df = df.dropna()
     return df
 
 
 def preProcessingPipeline(df, dateField, yvalField):
-    '''
+    """
     the date,y values are set to a fixed name that will be used throughout.
     the index of the dataframe is made to date for functions that require this.
-    '''
+    """
     df = dropNullValues(df)
     df['date'] = pd.to_datetime(df[dateField], infer_datetime_format=True)
     df['point_timestamp'] = df[dateField]
@@ -169,38 +190,41 @@ def preProcessingPipeline(df, dateField, yvalField):
 
 
 def dataPlot(df):
-    # plot the initial dataset 
+    # plot the initial dataset
     plt.plot_date(df.index, df['point_value'])
     plt.show()
 
 
 def graphPlot(pred, test):
-    # plotting test predictions vs original test set 
+    # plotting test predictions vs original test set
     plt.plot_date(test.index, test['point_value'], color='cornflowerblue', label='Original')
     plt.plot_date(test.index, pred, color='firebrick', label='Predicted')
+    plt.legend(loc='best')
     plt.show()
 
 
 def modelClassifier(df, sdf):
-    '''
+    """
     selecting the best model based on time series features.
     1. ADfuller test is performed in all the cases and the data is made stationary if needed.
     2. if the time series data has hour,day component the features are extracted and ensemble model is used. (XGBoost)
-    3. if the data has seasonality we use the RNN model LSTM to capture the seasonality of the time series
+    3. if the data has seasonality or trend after trying to removing trend comp, we use the RNN model LSTM to capture the seasonality of the time series.
     4. if the data has no daily,hourly component then we use the ARIMA model. which tunes the params(AR,MA,ARIMA)
-    '''
+    """
 
     pval = augmentedDickeyFullerTest(df)
     fdf = create_features(df)
+    print(fdf.head())
+    nature_of_ts = checkNatureOfTimeSeries(fdf)
     modelused = ""
     print("BEFORE:", pval, sdf['trend'].mean(), sdf['seasonality'].mean())
 
-    if fdf['hour'].sum() > 0 or fdf['dayofweek'].sum() > 0:
+    if nature_of_ts == "hourly" or nature_of_ts == "daily":
         # choose ensemble method or neural nets
         if pval < 0.05:
             print(f"Stationary Time Series data. pvalue = {pval}")
             train, test = trainTestSplit(df)
-            if sdf['seasonality'].mean() > 15:
+            if sdf['seasonality'].mean() > 2.5 or sdf['trend'].mean() > 2.5:
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -210,11 +234,14 @@ def modelClassifier(df, sdf):
             print(f"Non Stationary Time Series data. pvalue = {pval}")
             df = makeStationary(df)
             pval = augmentedDickeyFullerTest(df)
-            print(f"Eliminated Trend Component. pvalue = {pval}")
+
+            if pval < 0.05:
+                print(f"Eliminated Trend Component. pvalue = {pval}")
             train, test = trainTestSplit(df)
             sdf = summary(df)
 
-            if sdf['seasonality'].mean() > 15:
+            if sdf['seasonality'].mean() > 2.5 or pval > 0.05 or sdf['trend'].mean() > 2.5:
+                print(f"P value = {pval} Trend Component exists and the Time series is long range. Choosing RNN model")
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -225,7 +252,7 @@ def modelClassifier(df, sdf):
             print(f"Stationary Time Series data. pvalue = {pval}")
 
             train, test = trainTestSplit(df)
-            if sdf['seasonality'].mean() > 15:
+            if sdf['seasonality'].mean() > 2.5 or sdf['trend'].mean() > 2.5:
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -235,11 +262,15 @@ def modelClassifier(df, sdf):
             print(f"Non Stationary Time Series data. pvalue = {pval}")
             df = makeStationary(df)
             pval = augmentedDickeyFullerTest(df)
-            print(f"Eliminated Trend Component. pvalue = {pval}")
+
+            if pval < 0.05:
+                print(f"Eliminated Trend Component. pvalue = {pval}")
+
             train, test = trainTestSplit(df)
             sdf = summary(df)
 
-            if sdf['seasonality'].mean() > 15:
+            if sdf['seasonality'].mean() > 2.5 or pval > 0.05 or sdf['trend'].mean() > 2.5:
+                print(f"Pvalue = {pval} Trend Component exists and the Time series is long range. Choosing RNN model")
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -253,7 +284,7 @@ def modelClassifier(df, sdf):
 
 
 def modelPipeline(df):
-    # feeding the dataset to model classifier 
+    # feeding the dataset to model classifier
     sdf = summary(df)
     pred, test, model, mape = modelClassifier(df, sdf)
     graphPlot(pred, test)
@@ -262,7 +293,7 @@ def modelPipeline(df):
 
 
 def summaryPlot(df, sdf):
-    # plotting the time series features 
+    # plotting the time series features
     plt.figure(figsize=(12, 10))
     plt.subplot(411)
     plt.plot(sdf, label='Original time series', color='blue')
