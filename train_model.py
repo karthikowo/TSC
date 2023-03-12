@@ -109,6 +109,9 @@ def xgb_regressor(train, test, feature='point_value'):
 
 
 def LSTMR(train, test):
+    """
+    model used for unexplainable seasonality/trend followed after Adfuller tests.
+    """
     scaler = MinMaxScaler()
     scaler.fit(train['point_value'].values.reshape(-1, 1))
     scaled_train = scaler.transform(train['point_value'].values.reshape(-1, 1))
@@ -209,7 +212,7 @@ def modelClassifier(df, sdf):
     selecting the best model based on time series features.
     1. ADfuller test is performed in all the cases and the data is made stationary if needed.
     2. if the time series data has hour,day component the features are extracted and ensemble model is used. (XGBoost)
-    3. if the data has seasonality or trend after trying to removing trend comp, we use the RNN model LSTM to capture the seasonality of the time series.
+    3. if the data has seasonality or trend after trying to removing trend comp, we use the RNN model LSTM to capture the seasonality/trend of the time series.
     4. if the data has no daily,hourly component then we use the ARIMA model. which tunes the params(AR,MA,ARIMA)
     """
 
