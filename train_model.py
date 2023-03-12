@@ -1,7 +1,10 @@
+import sys
+
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
 import numpy as np
+import statsmodels.api as sm
 from sklearn.metrics import mean_absolute_percentage_error
 import matplotlib.pyplot as plt
 import warnings
@@ -12,6 +15,7 @@ from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
+from statsmodels.graphics.tsaplots import plot_acf,plot_pacf
 
 warnings.filterwarnings('ignore')
 
@@ -25,7 +29,33 @@ def createFeatures(df):
     return df
 
 def arimaModel(train,test,feature='point_value'):
-    model = ARIMA(train[feature], order=(2, 1, 2))
+
+    acf,cia = sm.tsa.acf(train[feature],alpha=0.05)
+    pacf,cip = sm.tsa.pacf(train[feature],alpha=0.05)
+
+    print(pacf,cip)
+    p = 0
+    q = 0
+    acf_absval = 0
+    pacf_absval = 0
+    plot_acf(train[feature])
+    plot_pacf(train[feature])
+    plt.show()
+
+    for i in range(1,len(acf)):
+        if abs(acf[i])>cia[i][1]-cia[i][0]:
+            if abs(acf[i])>acf_absval:
+                p = i
+                acf_absval = abs(acf[i])
+
+        if abs(pacf[i])>cip[i][1]-cip[i][0]:
+            if abs(pacf[i])>pacf_absval:
+                q = i
+                pacf_absval = abs(pacf[i])
+
+    print(p,q,acf_absval,pacf_absval)
+
+    model = ARIMA(train[feature], order=(p, 1, q))
     ARIMA_model = model.fit()
 
     start = len(train)
@@ -126,11 +156,11 @@ def graphPlot(pred,test):
 def modelClassifier(train,test):
 
     pred1 = arimaModel(train,test)
-    pred2 = xgbRegressor(train,test)
-    pred3 = LSTMR(train,test)
+    # pred2 = xgbRegressor(train,test)
+    # pred3 = LSTMR(train,test)
 
-    mape = mean_absolute_percentage_error(test['point_value'], pred3)
-    return pred3,"xgb",mape
+    mape = mean_absolute_percentage_error(test['point_value'], pred1)
+    return pred1,"xgb",mape
 
 def modelPipeline(df):
 
