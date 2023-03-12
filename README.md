@@ -46,7 +46,7 @@ The model used and the MAPE of the model is returned as a response.
 # Time Series data decomposition visualization.
 
 
-In bash, #type streamlit run dashboard.py
+# In bash, run command "streamlit run dashboard.py"
 
 
 ![image](https://user-images.githubusercontent.com/76225835/224566290-e08fbdac-21cf-4f44-a6f4-88364f2fb279.png)
