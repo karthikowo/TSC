@@ -157,7 +157,7 @@ def modelClassifier(df, sdf):
     modelused = ""
     print("BEFORE:", pval, sdf['trend'].mean(), sdf['seasonality'].mean())
 
-    if fdf['hour'].sum() > 0 and fdf['dayofweek'].sum() > 0:
+    if fdf['hour'].sum() > 0 or fdf['dayofweek'].sum() > 0:
         # choose ensemble method or neural nets
         if pval < 0.05:
             print(f"Stationary Time Series data. pvalue = {pval}")
