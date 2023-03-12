@@ -58,9 +58,26 @@ In bash, type streamlit run dashboard.py
 # Implementing the Model classifier
 
 The initial thought process was to create a variant of nbc or kernel SVM classifier which classifies the best model to take based on the 
-
 time series extracted features like trend seasonality etc. But I was unable to carry out the implementation and chose to pick the model based on
-
-the extracted features instead ,also one of the reason for this was more than 1 model comes under multiple use case sometimes. The models chosen 
-
+the extracted features like seasonality,trend,hr,day comp instead ,also one of the reason for this was more than 1 model comes under multiple use case sometimes. The models chosen 
 are :
+
+
+# 1. XGBoost
+
+It is chosen when the time component is daily/hourly as there are multiple features that are extracted from the point_timestamp the features and train set is feed to XGBoost model.
+
+
+# 2. AR,MA,ARIMA
+
+It is chosen when the dataset does not have the daily and hourly component. The arima(p,d,q) paramters are tuned based on the outliers formed above the confidence intervals of the Autocorrelation and Partial Autocorrelation found from the dataset. So that the model could either be AR or MA or ARIMA model based on the values of p,d,q tuned.
+
+# 3. LSTM
+
+It is chosen when the dataset has unexplainable trend component. There are some datasets which I have came upon where it passes the stationarity tests and has very minimal trend component but is unable to fit on the previous models.
+
+
+Prophet is one of the models which can capture the seasonality of the time series and build the model upon it. But I was unable to incorporate prophet as I had trouble installing the module because of my depricated compiler version and linkage of path error of the conda site packages.
+
+
+This classifier may not produce the best results on any dataset given as input as there are some unexplainable statistical features that my model might have not covered. These are the assumptions made while developing the classifier. Overall a single model is selected for the build and the MAPE value is generated and returned as a response.
