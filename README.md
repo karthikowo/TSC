@@ -53,3 +53,14 @@ In bash, type streamlit run dashboard.py
 
 ![image](https://user-images.githubusercontent.com/76225835/224566317-13d9158b-54fc-4e65-a8a4-12c2583151fc.png)
 
+
+
+# Implementing the Model classifier
+
+The initial thought process was to create a variant of nbc or kernel SVM classifier which classifies the best model to take based on the 
+
+time series extracted features like trend seasonality etc. But I was unable to carry out the implementation and chose to pick the model based on
+
+the extracted features instead ,also one of the reason for this was more than 1 model comes under multiple use case sometimes. The models chosen 
+
+are :
