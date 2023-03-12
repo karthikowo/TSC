@@ -16,6 +16,7 @@ from keras.layers import LSTM
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 warnings.filterwarnings('ignore')
+exports = []
 
 
 def create_features(df):
@@ -241,7 +242,7 @@ def modelClassifier(df, sdf):
             sdf = summary(df)
 
             if sdf['seasonality'].mean() > 2.5 or pval > 0.05 or sdf['trend'].mean() > 2.5:
-                print(f"P value = {pval} Trend Component exists and the Time series is long range. Choosing RNN model")
+                print(f"P value = {pval} Trend Component exists and the Time series is long range. Choosing LSTM model")
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -270,7 +271,7 @@ def modelClassifier(df, sdf):
             sdf = summary(df)
 
             if sdf['seasonality'].mean() > 2.5 or pval > 0.05 or sdf['trend'].mean() > 2.5:
-                print(f"Pvalue = {pval} Trend Component exists and the Time series is long range. Choosing RNN model")
+                print(f"Pvalue = {pval} Trend Component exists and the Time series is long range. Choosing LSTM model")
                 pred = LSTMR(train, test)
                 modelused = "LSTM"
             else:
@@ -280,6 +281,9 @@ def modelClassifier(df, sdf):
     print("AFTER", pval, sdf['trend'].mean(), sdf['seasonality'].mean())
 
     mape = mean_absolute_percentage_error(test['point_value'], pred)
+    exports.append(pred)
+    exports.append(test)
+
     return pred, test, modelused, mape
 
 
@@ -326,6 +330,10 @@ def summary(df):
     new_df_add = pd.concat([add_results.seasonal, add_results.trend, add_results.resid, add_results.observed], axis=1)
     new_df_add.columns = ['seasonality', 'trend', 'resid', 'observed']
 
+    exports.append(sdf)
+    exports.append(new_df_add['trend'])
+    exports.append(new_df_add['seasonality'])
+    exports.append(new_df_add['resid'])
     return new_df_add
 
 
@@ -335,4 +343,4 @@ def model_train(df, dateField, yvalField):
     dataPlot(df)
     mape, model = modelPipeline(df)
 
-    return mape, model
+    return mape, model, exports
