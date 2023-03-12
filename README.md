@@ -80,6 +80,5 @@ Prophet is one of the models which can capture the seasonality of the time serie
 
 
 
-
-
+# Inference
 This classifier may not produce the best results on any dataset given as input as there are some unexplainable statistical features that my model might have not covered. These are the assumptions made while developing the classifier. Overall a single model is selected for the build and the MAPE value is generated and returned as a response.
