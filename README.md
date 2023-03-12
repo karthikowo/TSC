@@ -21,6 +21,27 @@ To run : uvicorn api_endpoints:app --reload
 Check localhost:8000/docs and use uploadfile to upload dataset. 
 
 Specify exact fields in the dataset, the default values are used here.
-![image](https://user-images.githubusercontent.com/76225835/224473187-2c3dec1b-d9c6-47d3-b889-b65b5c317c5b.png)
+
+![image](https://user-images.githubusercontent.com/76225835/224533004-e9ccf005-20fb-400f-bdcb-333bad501038.png)
+
+
+Then the plot of the dataset is displayed.
+
+
+![image](https://user-images.githubusercontent.com/76225835/224532975-918d80b9-90e9-48d7-96da-de3525dd8e54.png)
+
+
+Then Model is built based on the features of the dataset and the predictions are made for the test set.
+
+
+![image](https://user-images.githubusercontent.com/76225835/224533111-2a7f2cb0-627b-45f5-9391-1737e9c2a76d.png)
+
+
+The model used and the MAPE of the model is returned as a response.
+
+
+![image](https://user-images.githubusercontent.com/76225835/224533163-30a47944-c565-488c-a1c4-900cae1ac854.png)
+
+
 
 
