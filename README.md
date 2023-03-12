@@ -14,7 +14,7 @@ matplotlib
 
 Tensorflow
 
-Initial Setup of hackathon
+xgboost
 
 # To run : uvicorn api_endpoints:app --reload
 
