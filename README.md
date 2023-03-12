@@ -76,8 +76,10 @@ It is chosen when the dataset does not have the daily and hourly component. The 
 
 It is chosen when the dataset has unexplainable trend component. There are some datasets which I have came upon where it passes the stationarity tests and has very minimal trend component but is unable to fit on the previous models.
 
-
 Prophet is one of the models which can capture the seasonality of the time series and build the model upon it. But I was unable to incorporate prophet as I had trouble installing the module because of my depricated compiler version and linkage of path error of the conda site packages.
+
+
+
 
 
 This classifier may not produce the best results on any dataset given as input as there are some unexplainable statistical features that my model might have not covered. These are the assumptions made while developing the classifier. Overall a single model is selected for the build and the MAPE value is generated and returned as a response.
