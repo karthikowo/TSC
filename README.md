@@ -1,6 +1,6 @@
 # dataGenie-hackathon
 
-Dependancies to be installed:
+# Dependancies to be installed:
 
 statsmodels
 
@@ -16,7 +16,7 @@ Tensorflow
 
 Initial Setup of hackathon
 
-To run : uvicorn api_endpoints:app --reload
+# To run : uvicorn api_endpoints:app --reload
 
 Check localhost:8000/docs and use uploadfile to upload dataset. 
 
@@ -43,5 +43,13 @@ The model used and the MAPE of the model is returned as a response.
 ![image](https://user-images.githubusercontent.com/76225835/224533163-30a47944-c565-488c-a1c4-900cae1ac854.png)
 
 
+# Time Series data decomposition visualization.
 
+
+In bash, type streamlit run dashboard.py
+
+
+![image](https://user-images.githubusercontent.com/76225835/224566290-e08fbdac-21cf-4f44-a6f4-88364f2fb279.png)
+
+![image](https://user-images.githubusercontent.com/76225835/224566317-13d9158b-54fc-4e65-a8a4-12c2583151fc.png)
 
