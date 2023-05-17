@@ -1,4 +1,4 @@
-# dataGenie-hackathon
+# dataGenie-hackathon - Time Series Classifier
 
 # Dependancies to be installed:
 
